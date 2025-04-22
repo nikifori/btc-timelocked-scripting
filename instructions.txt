@@ -1,0 +1,260 @@
+nikifori: Create a documentation on how to run the python scripts based on the e2e_execution.sh file.
+Initially return a markdown format.
+
+Workspace: Collecting workspace information
+
+```markdown
+# Running the Python Scripts for Timelocked P2SH Transactions
+
+This guide explains how to execute the Python scripts for creating and spending timelocked P2SH addresses, based on the steps outlined in the `e2e_execution.sh` file.
+
+## Prerequisites
+
+1. **Bitcoin Core Setup**:
+   - Ensure Bitcoin Core is installed and configured for `regtest` mode.
+   - Start the `bitcoind` daemon in `regtest` mode.
+
+2. **Python Environment**:
+   - Use Python 3.10.16.
+   - Install the required dependencies listed in `requirements.txt`:
+     ```sh
+     pip install -r requirements.txt
+     ```
+
+3. **Activate Environment**:
+   - Activate the Python environment where the dependencies are installed.
+
+4. **Reset Regtest Directory** (Optional):
+   - Delete the `~/.bitcoin/regtest` directory to reset the blockchain state.
+
+## Steps to Run the Scripts
+
+### 1. Create a Legacy Wallet and Address
+Run the following commands to create a wallet and generate a legacy address:
+```sh
+bitcoin-cli -regtest createwallet "main_wallet" false false "" false false
+send_from_address=$(bitcoin-cli -regtest getnewaddress)
+```
+
+### 2. Mine Initial Blocks
+Mine 101 blocks to unlock the coinbase rewards:
+```sh
+bitcoin-cli -regtest generatetoaddress 101 "$send_from_address"
+```
+
+### 3. Create a Timelocked P2SH Address
+Run the 
+
+create_timelocked_p2sh.py
+
+ script to generate a timelocked P2SH address:
+```sh
+python create_timelocked_p2sh.py --key <private_key> --locktime <locktime>
+```
+- Replace `<private_key>` with the WIF private key.
+- Replace `<locktime>` with the desired absolute locktime (block height or UNIX timestamp).
+
+### 4. Fund the Timelocked Address
+Send funds to the generated P2SH address and mine a block to confirm:
+```sh
+bitcoin-cli -regtest sendtoaddress <timelocked_address> 1.0
+bitcoin-cli -regtest generatetoaddress 1 "$send_from_address"
+```
+Repeat this step as needed to send multiple transactions.
+
+### 5. Spend from the Timelocked P2SH Address
+Run the 
+
+spend_timelocked_p2sh.py
+
+ script to spend funds from the timelocked P2SH address:
+```sh
+python spend_timelocked_p2sh.py --locktime <locktime> --private_key <private_key> --p2sh_address <timelocked_address> --destination_p2pkh_address <destination_address>
+```
+- Replace `<destination_address>` with the legacy address to receive the funds.
+
+### 6. Mine Blocks to Satisfy the Timelock
+Mine blocks until the timelock is satisfied:
+```sh
+bitcoin-cli -regtest generatetoaddress <locktime> "$send_from_address"
+```
+
+### 7. Verify the Transaction
+Check the mempool to ensure the transaction is broadcasted:
+```sh
+bitcoin-cli -regtest getrawmempool
+```
+Mine one more block to confirm the transaction:
+```sh
+bitcoin-cli -regtest generatetoaddress 1 "$send_from_address"
+```
+
+### 8. Check the Destination Address Balance
+Verify the balance of the destination address:
+```sh
+bitcoin-cli -regtest scantxoutset start "[\"addr(<destination_address>)\"]"
+```
+
+## Notes
+- Replace placeholders (e.g., `<private_key>`, `<timelocked_address>`) with actual values.
+- Ensure the `bitcoin-cli` commands are executed in the same environment as the `bitcoind` daemon.
+
+```
+
+nikifori: how to copy paste what you generated as a markdown raw format?
+
+GitHub Copilot: To copy and paste the generated markdown as raw format:
+
+1. Highlight the entire markdown content I provided.
+2. Right-click and select **Copy** or press `Ctrl+C` (Linux/Windows) or `Cmd+C` (Mac).
+3. Open your 
+
+README.md
+
+ file in Visual Studio Code.
+4. Place the cursor where you want to paste the content.
+5. Right-click and select **Paste** or press `Ctrl+V` (Linux/Windows) or `Cmd+V` (Mac).
+6. Save the file using `Ctrl+S` (Linux/Windows) or `Cmd+S` (Mac).
+
+This will paste the markdown content as raw text into your file.
+
+nikifori: Update README.md with ALL the steps in the /home/nikifori/Desktop/fetcoin/btc-timelocked-scripting/e2e_execution.sh
+
+GitHub Copilot: ```markdown
+# Running the Python Scripts for Timelocked P2SH Transactions
+
+This guide explains how to execute the Python scripts for creating and spending timelocked P2SH addresses, based on the steps outlined in the `e2e_execution.sh` file.
+
+## Prerequisites
+
+1. **Bitcoin Core Setup**:
+   - Ensure Bitcoin Core is installed and configured for `regtest` mode.
+   - Start the `bitcoind` daemon in `regtest` mode.
+
+2. **Python Environment**:
+   - Use Python 3.10.16.
+   - Install the required dependencies listed in `requirements.txt`:
+     ```sh
+     pip install -r requirements.txt
+     ```
+
+3. **Activate Environment**:
+   - Activate the Python environment where the dependencies are installed.
+
+4. **Reset Regtest Directory** (Optional):
+   - Delete the `~/.bitcoin/regtest` directory to reset the blockchain state.
+
+5. **Bitcoin Configuration**:
+   Ensure the `~/.bitcoin/bitcoin.conf` file contains the following:
+   ```
+   regtest=1
+   server=1
+   deprecatedrpc=create_bdb # this one is going to be deprecated soon-ish
+
+   [regtest]
+   maxtxfee=0.01
+   fallbackfee=0.001
+   ```
+
+## Steps to Run the Scripts
+
+### 1. Create a Legacy Wallet and Address
+Run the following commands to create a wallet and generate a legacy address:
+```sh
+bitcoin-cli -regtest createwallet "main_wallet" false false "" false false
+send_from_address=$(bitcoin-cli -regtest getnewaddress)
+```
+
+### 2. Mine Initial Blocks
+Mine 101 blocks to unlock the coinbase rewards:
+```sh
+bitcoin-cli -regtest generatetoaddress 101 "$send_from_address"
+```
+Check the current balance:
+```sh
+current_balance=$(bitcoin-cli -regtest getbalance)
+echo "Current balance: $current_balance"
+```
+
+### 3. Create a Timelocked P2SH Address
+Run the `create_timelocked_p2sh.py` script to generate a timelocked P2SH address:
+```sh
+private_key="cRvyLwCPLU88jsyj94L7iJjQX5C2f8koG4G2gevN4BeSGcEvfKe9"
+locktime=200
+timelocked_address=$(
+  python ./create_timelocked_p2sh.py \
+    --key "$private_key" \
+    --locktime $locktime \
+  | sed -n 's/^Timelocked P2SH Address: //p'
+)
+echo "Timelocked P2SH Address is: $timelocked_address"
+```
+
+### 4. Fund the Timelocked Address
+Send 1 BTC to the timelocked address 10 times and mine a block after each transaction:
+```sh
+for i in {1..10}
+do
+  bitcoin-cli -regtest sendtoaddress "$timelocked_address" 1.0
+  bitcoin-cli -regtest generatetoaddress 1 "$send_from_address"
+  echo "Sending 1 bitcoin to the timelocked address and mining 1 block (iteration $i)."
+done
+```
+Mine 10 additional blocks:
+```sh
+bitcoin-cli -regtest generatetoaddress 10 "$send_from_address"
+```
+
+### 5. Verify Block Count
+Check the current block count to ensure it is less than the locktime:
+```sh
+block_count=$(bitcoin-cli -regtest getblockcount)
+echo "Current block count: $block_count"
+```
+
+### 6. Create a Destination Wallet and Address
+Create a destination wallet and generate a legacy address:
+```sh
+bitcoin-cli -regtest createwallet "dest_wallet" false false "" false false
+destination_address=$(bitcoin-cli -regtest -rpcwallet=dest_wallet getnewaddress "" legacy)
+```
+
+### 7. Attempt to Spend from the Timelocked Address (Before Timelock)
+Run the `spend_timelocked_p2sh.py` script to attempt spending from the timelocked address:
+```sh
+python ./spend_timelocked_p2sh.py --locktime $locktime --private_key "$private_key" --p2sh_address "$timelocked_address" --destination_p2pkh_address $destination_address
+```
+This transaction will be rejected because the timelock has not yet been reached.
+
+### 8. Mine Blocks to Satisfy the Timelock
+Mine blocks until the timelock is satisfied:
+```sh
+bitcoin-cli -regtest generatetoaddress $locktime "$send_from_address"
+```
+
+### 9. Spend from the Timelocked Address (After Timelock)
+Run the `spend_timelocked_p2sh.py` script again to spend from the timelocked address:
+```sh
+python ./spend_timelocked_p2sh.py --locktime $locktime --private_key "$private_key" --p2sh_address "$timelocked_address" --destination_p2pkh_address $destination_address
+```
+
+### 10. Verify the Transaction
+Check the mempool to ensure the transaction is broadcasted:
+```sh
+bitcoin-cli -regtest getrawmempool
+```
+Mine one more block to confirm the transaction:
+```sh
+bitcoin-cli -regtest generatetoaddress 1 "$send_from_address"
+```
+
+### 11. Check the Destination Address Balance
+Verify the balance of the destination address:
+```sh
+bitcoin-cli -regtest scantxoutset start "[\"addr($destination_address)\"]"
+```
+
+## Notes
+- Replace placeholders (e.g., `<private_key>`, `<timelocked_address>`) with actual values.
+- Ensure the `bitcoin-cli` commands are executed in the same environment as the `bitcoind` daemon.
+```
