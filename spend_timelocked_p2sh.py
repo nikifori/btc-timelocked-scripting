@@ -91,17 +91,6 @@ def compute_total_fee(p2sh_utxos, p2pkh_pk, redeem_script, dest_address):
     num_inputs = len(p2sh_utxos["unspents"])
     num_outputs = 1  # single P2PKH destination
 
-    # 3) helper to size varints
-    def varint_size(n: int) -> int:
-        if n < 0xFD:
-            return 1
-        elif n <= 0xFFFF:
-            return 3
-        elif n <= 0xFFFFFFFF:
-            return 5
-        else:
-            return 9
-
     # 4) scriptSig size: push(sig) + push(pubkey) + push(redeem_script)
     sig_size = 73  # DER sig + sighash flag
     pubkey_size = len(bytes.fromhex(p2pkh_pk))  # should be 33
@@ -139,6 +128,7 @@ def compute_total_fee(p2sh_utxos, p2pkh_pk, redeem_script, dest_address):
     return fee_sats
 
 
+# helper to size varints
 def varint_size(n: int) -> int:
     if n < 0xFD:
         return 1
