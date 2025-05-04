@@ -1,6 +1,7 @@
 NOTE: These commands are intended to be run on a Linux environment and have been tested on:
    - Ubuntu 24.04.1 LTS.
    - Bitcoin Core RPC client version v28.1.0.
+   - Repository: https://github.com/nikifori/btc-timelocked-scripting
 
 1. Install and configure Bitcoin Core for regtest mode.
 2. Start the bitcoind daemon in regtest mode:
