@@ -81,6 +81,10 @@ def compute_total_fee(p2sh_utxos, p2pkh_pk, redeem_script, dest_address):
     """
     Compute and return the fee (in satoshis) required to sweep all UTXOs
     in `p2sh_utxos` through the CLTV‑wrapped redeem_script into `to_addr`.
+
+    I am trying to do that without needing to seralize a dummy tx.
+
+    Documentation: https://en.bitcoin.it/wiki/Protocol_documentation#tx
     """
     # 1) fetch fee rate (sat/B), warn if falling back
     sat_per_byte = get_fee_rate()
@@ -92,8 +96,14 @@ def compute_total_fee(p2sh_utxos, p2pkh_pk, redeem_script, dest_address):
     num_outputs = 1  # single P2PKH destination
 
     # 4) scriptSig size: push(sig) + push(pubkey) + push(redeem_script)
+    # DER-Encoded ECDSA Signature (~73 bytes)
+    # Bitcoin signatures use DER encoding plus a one-byte sighash flag. In practice, this averages out to about 73 bytes per signature
     sig_size = 73  # DER sig + sighash flag
+
+    # Compressed Public Key (33 bytes)
+    # A compressed secp256k1 public key consists of a 1-byte prefix and a 32-byte X-coordinate, for a total of 33 bytes 
     pubkey_size = len(bytes.fromhex(p2pkh_pk))  # should be 33
+
     redeem_raw = bytes.fromhex(
         redeem_script.to_hex()
     )  # raw bytes of your CLTV‐P2PKH script
@@ -101,6 +111,8 @@ def compute_total_fee(p2sh_utxos, p2pkh_pk, redeem_script, dest_address):
     script_sig_sz = (1 + sig_size) + (1 + pubkey_size) + (1 + redeem_size)
 
     # 5) input size: outpoint(36) + varint(scriptSig) + scriptSig + sequence(4)
+    # Outpoint & Sequence (36 + 4 bytes)
+    # Each input refers to a previous UTXO by a 32-byte TXID + 4-byte output index (36 bytes), and includes a 4-byte sequence field 
     input_size = 36 + varint_size(script_sig_sz) + script_sig_sz + 4
 
     # 6) output size: value(8) + varint(scriptPubKey) + scriptPubKey
@@ -108,6 +120,7 @@ def compute_total_fee(p2sh_utxos, p2pkh_pk, redeem_script, dest_address):
     output_sz = 8 + varint_size(len(dest_raw)) + len(dest_raw)
 
     # 7) total vsize = version(4) + varint(nIn) + inputs + varint(nOut) + outputs + locktime(4)
+    # formula from: https://en.bitcoin.it/wiki/Protocol_documentation#tx
     tx_vsize = (
         4
         + varint_size(num_inputs)
@@ -130,6 +143,7 @@ def compute_total_fee(p2sh_utxos, p2pkh_pk, redeem_script, dest_address):
 
 # helper to size varints
 def varint_size(n: int) -> int:
+    # source: https://learnmeabitcoin.com/technical/general/compact-size/
     if n < 0xFD:
         return 1
     elif n <= 0xFFFF:
